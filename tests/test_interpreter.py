@@ -1,4 +1,5 @@
 import pytest
+import allure
 from ecg_interpreter.models.ecg_data import Rhythm, STSegment
 from ecg_interpreter.ecg.interpreter import interpret_ecg
 from ecg_interpreter.models.interpretation import Diagnosis, Urgency, Interpretation
@@ -77,3 +78,23 @@ def test_interpret_ecg_previous_infarction(previous_infarction_reading):
     assert result == expected, (
         f"Для перенесённого инфаркта ожидалось {expected!r}, получено {result!r}"
     )
+@allure.title("Интерпретация ЭКГ без измерения вызывает ошибку")
+def test_interpret_ecg_rejects_missing_reading():
+    with pytest.raises(ValueError, match="Данные ЭКГ не могут быть пустыми"):
+        interpret_ecg(None)
+
+
+@pytest.mark.parametrize(
+    "heart_rate, expected_message",
+    [
+        (-0.1, "не может быть отрицательным"),
+        (300.1, "физиологически невозможно"),
+    ],
+)
+def test_interpret_ecg_rejects_invalid_heart_rate(
+    base_reading, heart_rate, expected_message
+):
+    base_reading.heart_rate = heart_rate
+
+    with pytest.raises(ValueError, match=expected_message):
+        interpret_ecg(base_reading)
